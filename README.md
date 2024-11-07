@@ -7,6 +7,3 @@
 </h1>
 <p align = "center">Asgard Andrés Mendoza Flores, Diego Armando Mijares Ledezma, Diego Gutiérrez Vargas, Juan José H. Beltrán</p>
 
-<h2> Resumen </h2>
-
-<p align = "justify"> ... </p>
