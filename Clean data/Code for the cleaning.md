@@ -6,6 +6,6 @@ in which the process is very well documented.
 
 ### Direct access to said notebooks
 
-[Data Cleaning Notebook Part 1](https://github.com/JuanjoBelt/MA2003B-PollutantFlowInTheWind/blob/Data-Cleaning/Methodology/01%20Data%20Cleaning/Part%201%20Data%20Preparation%20and%20Filtering.ipynb)
+[Data Cleaning Notebook Part 1](https://github.com/JuanjoBelt/MA2003B-PollutantFlowInTheWind/blob/Data-Cleaning/Methodology/01%20Data%20Cleaning/Part%20I/FiltradoColumnas.ipynb)
 
-[Data Cleaning Notebook Part 2](https://github.com/JuanjoBelt/MA2003B-PollutantFlowInTheWind/blob/Data-Cleaning/Methodology/01%20Data%20Cleaning/Part%202%20Data%20Imputation%20and%20Transformation.ipynb)
+[Data Cleaning Notebook Part 2](https://github.com/JuanjoBelt/MA2003B-PollutantFlowInTheWind/blob/Data-Cleaning/Methodology/01%20Data%20Cleaning/Part%20II/RevisionAndTransformation.ipynb)
