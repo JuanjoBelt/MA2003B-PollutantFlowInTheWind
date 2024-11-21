@@ -86,7 +86,16 @@ tables <- lapply(tables, function(df) {
 combined_df <- do.call(rbind, tables)
 
 # Print the combined dataframe to verify
-print(head(combined_df))
+head(combined_df)
+combined_df
+```
+```{r}
+#Quitar antes del 1 de marzo de 2023 y posteriores al 29 de febrero de 2024 a medianoche
+start_date <- as.POSIXct("2023-03-01 00:00:00")
+end_date <- as.POSIXct("2024-02-29 23:59:59")
+
+combined_df = combined_df[combined_df$date >= start_date & combined_df$date <= end_date, ]
+combined_df
 ```
 
 
@@ -160,6 +169,7 @@ Esta es la base para generar mapas con los gráficos polares. Es importante gene
 Polar plot por contaminante en las 13 estaciones con todos los datos.
 ```{r}
 #install.packages("leaflet.providers")
+library(leaflet.providers)
 polarMap(
   combined_df,
   latitude = "lat",
@@ -168,6 +178,25 @@ polarMap(
   type = "season",
   x= "WSR"
 )
+```
+```{r}
+library(dplyr)
+
+# Convert the `date` column to a Date-Time object
+combined_df$date <- as.POSIXct(combined_df$date, format = "%Y-%m-%d %H:%M:%S")
+
+# Adding seasonal information
+combined_df <- combined_df %>%
+  mutate(
+    month = as.numeric(format(date, "%m")),
+    season = case_when(
+      month %in% c(12, 1, 2) ~ "Winter",
+      month %in% c(3, 4, 5) ~ "Spring",
+      month %in% c(6, 7, 8) ~ "Summer",
+      month %in% c(9, 10, 11) ~ "Autumn"
+    )
+  )
+combined_df
 ```
 
 ```{r}
@@ -180,6 +209,7 @@ polarMap(
   type = "season",
   x= "WSR"
 )
+
 ```
 
 ```{r}
