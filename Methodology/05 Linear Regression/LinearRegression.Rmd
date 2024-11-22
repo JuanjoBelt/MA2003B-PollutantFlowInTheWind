@@ -1,6 +1,6 @@
 ---
-title: "PairwiseStatistics"
-author: "Asgard Andres Mendoza Flores"
+title: "Regresión Lineal"
+author: "Juanjo H. Beltrán"
 date: "`r Sys.Date()`"
 output: html_document
 ---
