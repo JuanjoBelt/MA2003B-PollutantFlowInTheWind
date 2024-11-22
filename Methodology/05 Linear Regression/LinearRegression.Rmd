@@ -33,6 +33,18 @@ tables= lapply(tables,date_formating)
 ```
 
 ```{r}
+library(dplyr)
+filter_by_date <- function(df, start_date, end_date){
+  df %>%
+    filter(date >= start_date & date <= end_date)
+}
+start <- as.POSIXct("2023-03-01 00:00:00")
+end <- as.POSIXct("2024-02-29 23:00:00")
+
+tables <- lapply(tables, filter_by_date, start, end)
+```
+
+```{r}
 summary(tables[[1]])
 ```
 
@@ -99,7 +111,7 @@ ggplot(data = melt(cor(winter_data[-c(1, 9)])), aes(Var2, Var1, fill = value))+
 Al estudiar el coeficiente de correlación de Pearson entre las variables se puede notar que el par de variables con mayor correlación es (PM10, PM2.5), con un coeficiente de 0.6564.
 
 ```{r}
-data = winter_data[c('PM10', 'PM2.5')]
+data = winter_data[c('PM10', 'PM2.5', 'WDV', 'WSR')]
 plot(data)
 ```
 
@@ -151,7 +163,7 @@ resultados = data.frame(reg.residuals,
                         reg.rstudent,
                         reg.hat, 
                         reg.cooks)
-resultados[order(abs(resultados$reg.residuals), decreasing = TRUE), ]
+head(resultados[order(abs(resultados$reg.residuals), decreasing = TRUE), ])
 ```
 
 Como puede verse, existen datos que se encuentran a una distancia de hasta 18 desviaciones estándar de la media, los cuales pueden sin duda considerarse atípicos. Vamos a filtrar y conservar únicamente aquellos que están a menos de tres desviaciones estándar de la media.
@@ -167,7 +179,7 @@ $$
 $$
 
 ```{r}
-new.data = cbind(winter_data[c(5, 6)], reg.rstudent, reg.hat, reg.cooks)
+new.data = cbind(winter_data[c(5, 6, 8)], reg.rstudent, reg.hat, reg.cooks)
 # Se eliminan aquellos que están muy alejados en términos de desviaciones estándar.
 new.data = new.data[new.data$reg.rstudent <= 3, ]
 # Se eliminan aquellos que no cumplen el criterio de la distancia de Leverage
@@ -255,6 +267,24 @@ bptest(reg, varformula = ~ new.data$PM10 * new.data$PM2.5 + I(new.data$PM10^2) +
 
 Ya que el valor-p en ambos test es notablemente menor que el nivel de significancia, se rechaza la hipótesis nula, y se concluye que existe evidencia estadística para descartar que los residuos sean homocedásticos. No se cumple el supuesto.
 
+### Independencia
+
+El test de Durbin-Watson busca probar o desmentir la presencia de autocorrelación. Es decir, que los errores de las observaciones adyacentes están correlacionados. Si esto ocurre, entonces la regresión de los mínimos cuadrados puede subestimar el error estándar de los coeficientes, lo que puede hacer pensar que sus predictores son significativos, cuando en realidad no lo son.
+
+Propone las siguientes hipótesis:
+
+-   $H_0: \text{No existe autocorrelación.}$
+-   $H_1: \text{Existe autocorrelación.}$
+
+```{r}
+#Prueba Durbin-Watson
+dwtest(reg)
+#Prueba Breusch-Godfrey
+bgtest(reg)
+```
+
+Ya que se obtuvo un valor-p menor que $\alpha$ se rechaza la hipótesis nula y se concluye que hay evidencia estadística para pensar que existe autocorrelación.
+
 ## Conclusión Apriori
 
 Ya que dos de los supuestos mas importantes de la regresión lineal (normalidad y homocedasticidad de los residuos) no se cumplen, se determina que la regresión lineal no es un buen modelo para entender la relación entre las partículas PM10 y PM2.5
@@ -264,7 +294,7 @@ Ya que dos de los supuestos mas importantes de la regresión lineal (normalidad 
 ```{r}
 new.data$PM10 = scale(new.data$PM10)
 new.data$PM2.5 = scale(new.data$PM2.5)
-new.data
+head(new.data)
 ```
 
 ## Último Modelo Lineal Estandarizado
@@ -342,6 +372,24 @@ bptest(reg, varformula = ~ new.data$PM10 * new.data$PM2.5 + I(new.data$PM10^2) +
 ```
 
 Ya que el valor-p en ambos test es notablemente menor que el nivel de significancia, se rechaza la hipótesis nula, y se concluye que existe evidencia estadística para descartar que los residuos sean homocedásticos. No se cumple el supuesto.
+
+### Independencia
+
+El test de Durbin-Watson busca probar o desmentir la presencia de autocorrelación. Es decir, que los errores de las observaciones adyacentes están correlacionados. Si esto ocurre, entonces la regresión de los mínimos cuadrados puede subestimar el error estándar de los coeficientes, lo que puede hacer pensar que sus predictores son significativos, cuando en realidad no lo son.
+
+Propone las siguientes hipótesis:
+
+-   $H_0: \text{No existe autocorrelación.}$
+-   $H_1: \text{Existe autocorrelación.}$
+
+```{r}
+#Prueba Durbin-Watson
+dwtest(reg)
+#Prueba Breusch-Godfrey
+bgtest(reg)
+```
+
+Ya que se obtuvo un valor-p menor que $\alpha$ se rechaza la hipótesis nula y se concluye que hay evidencia estadística para pensar que existe autocorrelación.
 
 ## Conclusión
 
