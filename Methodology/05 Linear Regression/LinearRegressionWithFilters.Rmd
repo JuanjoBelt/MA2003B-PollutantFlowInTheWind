@@ -1,0 +1,193 @@
+---
+title: "Regresión Lineal"
+author: "Juanjo H. Beltrán"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+Norte_2 <- read.csv("00.csv")
+Noroeste <- read.csv("02.csv")
+Sureste <- read.csv("03.csv")
+Centro <- read.csv("04.csv")
+
+#Se hace una lista con todas las estaciones que se piensan analizar 
+#tables será usado para análisis detallados de cada estación 
+tables = list(Norte_2, Noroeste, Sureste, Centro)
+```
+
+Actualmente sólo se está trabajando con la estación "Norte_2"
+
+```{r}
+date_formating <- function(df) 
+{
+  df[[1]] <- as.POSIXct(df[[1]], tz=Sys.timezone())
+  names(df)[1] <- "date"
+  return(df)
+}
+tables= lapply(tables,date_formating)
+```
+
+```{r}
+library(dplyr)
+filter_by_date <- function(df, start_date, end_date){
+  df %>%
+    filter(date >= start_date & date <= end_date)
+}
+start <- as.POSIXct("2023-03-01 00:00:00")
+end <- as.POSIXct("2024-02-29 23:00:00")
+
+tables <- lapply(tables, filter_by_date, start, end)
+```
+
+```{r}
+summary(tables[[1]])
+```
+
+Se determinan los intervalos de fechas exactos para los que se realizará el PolarPlot
+
+```{r}
+library(openair)
+data=tables[[1]]
+data <- cutData(data, type = "season")
+
+print(unique(data$season))
+```
+
+```{r}
+spring_data <- subset(data, season =="spring (mam)")
+summer_data <- subset(data, season == "summer (jja)")
+autumn_data <- subset(data, season== "autumn (son)")
+winter_data <- subset(data, season == "winter (def)")
+```
+
+A esta función faltaría agregarle los datos separados por las estaciones "correctas".
+
+```{r}
+library(openair)
+polarPlot(tables[[1]], 
+          poll=c("PM2.5", "PM10"), 
+          statistic= "Pearson", 
+          col="turbo", 
+          limits=c(0,1),
+          x="WSR", wd="WDV",
+          type="season",
+          ws_spread=2.5,
+          wd_spread=10)
+```
+
+## Filtrar Datos para Regresión
+
+```{r}
+plot(spring_data[-c(1, 9)])
+```
+
+## Filtrar los Datos
+
+```{r}
+new.data = spring_data %>% filter(WDV >= 180 & WDV <= 270)
+head(new.data)
+```
+
+```{r}
+plot(new.data[c('PM10', 'PM2.5')])
+corPlot(new.data[-c(1, 9)])
+```
+
+## Nuevo Modelo Lineal
+
+```{r}
+reg = lm(new.data$PM2.5 ~ new.data$PM10)
+summary(reg)
+```
+
+El modelo tiene un ajuste $r^2 = 0.4459$, que es ligeramente superior al ajuste original con los datos atípicos e influyentes, pero sigue sin ser un ajuste aceptable apriori, pues explica muy poco sobre la relación de los datos, aunque quizá no es la mejor métrica para datos que a simple vista no son homocedásticos.
+
+```{r}
+plot(new.data[c('PM10', 'PM2.5')], main = "Relación entre Contaminantes PM10 y PM2.5")
+abline(reg, col="red")
+```
+
+## Validación del Modelo
+
+### Media Cero en los Residuos
+
+Se realiza una prueba de hipótesis para media.
+
+$$
+H_0: \mu_R = 0
+$$
+
+$$
+H_1:\mu_R\neq 0
+$$
+
+```{r}
+t.test(reg$residuals)
+```
+
+Ya que el valor-p es mayor que el nivel de significancia, se conserva la hipótesis nula y se concluye que no hay suficiente evidencia estadística para descartar que la media de los residuos es cero. Se cumple el supuesto.
+
+### Normalidad de los Residuos
+
+```{r}
+qqnorm(reg$residuals)
+qqline(reg$residuals)
+```
+
+El el Q-Q Plot puede observarse que la distribución de los datos tiene colas cortas, pues los datos se concentran cerca de la media, generando una curtosis superior a la esperada en una distribución normal. Para respaldar estadísticamente la normalidad, se lleva a cabo una prueba.
+
+La prueba de normalidad de Shapiro-Wilk se basa en las siguientes hipótesis:
+
+-   $H_0:$ La distribución es normal.
+
+-   $H_1:$ La distribución NO es normal.
+
+```{r}
+shapiro.test(reg$residuals)
+```
+
+Siendo el valor-p es mayor que el nivel de significancia $\alpha = 0.05$, se conserva la hipótesis nula y se concluye que no existe evidencia estadística para negar que los residuos se distribuyen normalmente. Pasó la prueba.
+
+### Homocedasticidad
+
+Se implementan la prueba de Breusch-Pagan, además del test de White, la cual es una prueba más robusta que detecta formas no lineales de la heterocedasticidad.
+
+Estos test busca determinar la homocedasticidad, es decir, si la varianza de los residuos depende o no de los valores de las variables predictoras (o la variable predictora, como en este caso). Para ello, se establecen las siguientes hipótesis:
+
+-   $H_0: \text{Se cumple homocedasticidad.}$
+
+-   $H_1: \text{No se cumple la homocedasticidad.}$
+
+```{r}
+library(lmtest)
+#Prueba Breusch-Pagan:
+bptest(reg)
+
+#Prueba de White:
+bptest(reg, varformula = ~ new.data$PM10 * new.data$PM2.5 + I(new.data$PM10^2) + I(new.data$PM2.5^2))
+```
+
+Ya que el valor-p en ambos test es notablemente menor que el nivel de significancia, se rechaza la hipótesis nula, y se concluye que existe evidencia estadística para descartar que los residuos sean homocedásticos. No se cumple el supuesto.
+
+### Independencia
+
+El test de Durbin-Watson busca probar o desmentir la presencia de autocorrelación. Es decir, que los errores de las observaciones adyacentes están correlacionados. Si esto ocurre, entonces la regresión de los mínimos cuadrados puede subestimar el error estándar de los coeficientes, lo que puede hacer pensar que sus predictores son significativos, cuando en realidad no lo son.
+
+Propone las siguientes hipótesis:
+
+-   $H_0: \text{No existe autocorrelación.}$
+-   $H_1: \text{Existe autocorrelación.}$
+
+```{r}
+#Prueba Durbin-Watson
+dwtest(reg)
+#Prueba Breusch-Godfrey
+bgtest(reg)
+```
+
+Ya que se obtuvo un valor-p menor que $\alpha$ se rechaza la hipótesis nula y se concluye que hay evidencia estadística para pensar que existe autocorrelación.
